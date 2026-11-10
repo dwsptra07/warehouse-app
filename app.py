@@ -36,15 +36,36 @@ SCOPE = [
     "https://www.googleapis.com/auth/drive"
 ]
 
+# --- KONEKSI GOOGLE SHEETS (DUAL MODE: LOKAL & CLOUD) ---
+# --- KONEKSI GOOGLE SHEETS (ANTI-GAGAL CLOUD & LOKAL) ---
+SCOPE = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
+
 @st.cache_resource
 def init_connection():
     try:
-        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", SCOPE)
+        # Cek apakah st.secrets tersedia di Cloud
+        if hasattr(st, "secrets") and len(st.secrets) > 0:
+            # Ambil data langsung dari secrets (mendukung berbagai format)
+            if "gcp_service_account" in st.secrets:
+                creds_dict = dict(st.secrets["gcp_service_account"])
+            else:
+                creds_dict = dict(st.secrets)
+            
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
+        else:
+            # Jika dijalankan di laptop lokal
+            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", SCOPE)
+            
         client = gspread.authorize(creds)
         spreadsheet = client.open("Monitoring Serah Terima Part Service")
         sheet = spreadsheet.get_worksheet(0)
         return sheet
     except Exception as e:
+        # Tampilkan error aslinya jika masih gagal agar kita tahu sebabnya
+        st.error(f"Detail Error Koneksi: {e}")
         return None
 
 sheet = init_connection()
