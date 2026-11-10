@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+from datetime import datetime
 
 # --- PENGATURAN TAMPILAN & TEMA BAJAK LAUT ---
 st.set_page_config(
@@ -29,18 +30,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- KONEKSI GOOGLE SHEETS ---
-SCOPE = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
-]
-
-import streamlit as st
-import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
-
-# --- KONEKSI GOOGLE SHEETS CLOUD (VERSI TERBARU) ---
+# --- KONEKSI GOOGLE SHEETS CLOUD (DENGAN PEMBERSIH KUNCI PEM) ---
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -49,14 +39,18 @@ SCOPES = [
 @st.cache_resource
 def init_connection():
     try:
-        # Cek apakah berjalan di Streamlit Cloud menggunakan st.secrets
         if hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
             creds_dict = dict(st.secrets["gcp_service_account"])
+            
+            # Membersihkan karakter escape \n pada private_key agar tidak error MalformedFraming
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+                
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
         else:
-            # Jika berjalan di laptop lokal menggunakan file credentials.json
+            # Jika berjalan di laptop lokal
             creds = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
-
+            
         client = gspread.authorize(creds)
         spreadsheet = client.open("Monitoring Serah Terima Part Service")
         sheet = spreadsheet.get_worksheet(0)
@@ -67,7 +61,7 @@ def init_connection():
 
 sheet = init_connection()
 
-# --- DAFTAR AKUN & HAK AKSES KRU TERBARU ---
+# --- DAFTAR AKUN & HAK AKSES KRU ---
 AKUN_KRU = {
     "Putra": {"pass": "2626", "role": "Kapten"},
     "Dimas": {"pass": "dimas123", "role": "Kru"},
@@ -107,7 +101,6 @@ if not st.session_state.logged_in:
     st.info("💡 Hubungi Kapten (Putra) jika belum memiliki kunci sandi kru.")
 
 else:
-    # Status Login di Sidebar
     role_badge = "👑 KAPTEN" if st.session_state.role == "Kapten" else "⚓ KRU WAREHOUSE"
     st.sidebar.success(f"🟢 **{st.session_state.username}**\n*{role_badge}*")
     
@@ -119,7 +112,6 @@ else:
         
     st.sidebar.markdown("---")
     
-    # Menu Berdasarkan Hak Akses
     if st.session_state.role == "Kapten":
         menu = st.sidebar.radio("🗺️ Rute Pelayaran Kapten:", [
             "⚓ Dek Utama (Input WO)", 
@@ -134,12 +126,12 @@ else:
         ])
 
     if sheet is None:
-        st.error("❌ Google Sheets belum terhubung. Periksa kembali nama file atau credentials.json!")
+        st.error("❌ Google Sheets belum terhubung. Periksa kembali konfigurasi secrets atau kredensial Anda!")
     else:
         # --- MENU 1: DEK UTAMA (INPUT WO) ---
         if menu == "⚓ Dek Utama (Input WO)":
             st.title("🏴‍☠️ Dek Utama: Pencatatan Part Service")
-            st.markdown(f"*Ahoy, **{st.session_state.username}**! Catat harta karun Part Service baru di sini tanpa takut nomor WO ganda.*")
+            st.markdown(f"*Ahoy, **{st.session_state.username}**! Catat harta karun Part Service baru di sini.*")
             
             with st.form("pirate_entry_form", clear_on_submit=True):
                 col1, col2, col3 = st.columns(3)
@@ -238,12 +230,11 @@ else:
             except Exception as e:
                 st.warning("⚠️ Koneksi ke server terganggu ombak. Silakan muat ulang halaman web.")
 
-        # --- MENU 3A: PERINTAH MISI KAPTEN (KHUSUS KAPTEN) ---
+        # --- MENU 3A: PERINTAH MISI KAPTEN ---
         elif menu == "🎯 Perintah Misi Pengambilan Part" and st.session_state.role == "Kapten":
             st.title("🎯 Papan Perintah Misi & Tugas Kru")
             st.markdown("*Berikan instruksi khusus atau penugasan pengambilan part kepada kru warehouse di bawah komandomu.*")
             
-            # Daftar pilihan kru untuk tugas (mengambil dari list nama kru selain kapten yang sedang login)
             daftar_kru_tugas = [k for k, v in AKUN_KRU.items() if v["role"] == "Kru"]
             
             with st.form("mission_form"):
@@ -255,7 +246,7 @@ else:
                 with c2:
                     prioritas = st.selectbox("Tingkat Urgensi", ["Normal", "Urgent / Segera", "Darurat Unit Down"])
                     
-                catatan_misi = st.text_area("Instruksi / Catatan Pengambilan Part (Cth: Ambil di Rak A-2, pastikan part segel utuh)")
+                catatan_misi = st.text_area("Instruksi / Catatan Pengambilan Part (Cth: Ambil di Rak A-2)")
                 
                 kirim_misi = st.form_submit_button("📢 Kirim Perintah ke Kru")
                 if kirim_misi:
@@ -282,7 +273,7 @@ else:
             else:
                 st.info("Belum ada misi aktif yang diberikan ke kru saat ini.")
 
-        # --- MENU 3B: MISI TUGAS SAYA (KHUSUS KRU) ---
+        # --- MENU 3B: MISI TUGAS SAYA (KRU) ---
         elif menu == "🎯 Misi Tugas Saya":
             st.title(f"🎯 Papan Misi Tugas: {st.session_state.username}")
             st.markdown("*Berikut adalah daftar perintah atau tugas pengambilan part yang diberikan oleh Kapten untukmu.*")
@@ -304,6 +295,6 @@ else:
                             else:
                                 st.info("✨ Misi ini sudah selesai dikerjakan.")
                 else:
-                    st.info("⚓ Belum ada tugas misi khusus untukmu saat ini. Istirahat yang cukup atau bantu rekan yang lain!")
+                    st.info("⚓ Belum ada tugas misi khusus untukmu saat ini.")
             else:
                 st.info("⚓ Belum ada misi dari Kapten untuk saat ini.")
