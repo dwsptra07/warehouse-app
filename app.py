@@ -30,7 +30,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- KONEKSI GOOGLE SHEETS CLOUD (DENGAN PEMBERSIH KUNCI PEM) ---
+# --- KONEKSI GOOGLE SHEETS CLOUD (ANTI MALFORMED FRAMING) ---
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -44,7 +44,9 @@ def init_connection():
             
             # Membersihkan karakter escape \n pada private_key agar tidak error MalformedFraming
             if "private_key" in creds_dict:
-                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+                pk = creds_dict["private_key"]
+                pk = pk.replace("\\n", "\n")
+                creds_dict["private_key"] = pk
                 
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
         else:
