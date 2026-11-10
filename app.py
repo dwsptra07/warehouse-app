@@ -38,7 +38,7 @@ SCOPE = [
 
 import json
 
-# --- KONEKSI GOOGLE SHEETS (FINAL & AMAN CLOUD) ---
+# --- KONEKSI GOOGLE SHEETS (CLOUD & LOKAL READY) ---
 SCOPE = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
@@ -47,16 +47,11 @@ SCOPE = [
 @st.cache_resource
 def init_connection():
     try:
-        # Cek apakah berjalan di Streamlit Cloud
-        if hasattr(st, "secrets") and len(st.secrets) > 0:
-            if "gcp_service_account" in st.secrets:
-                # Ambil sebagai dict dari section gcp_service_account
-                creds_dict = dict(st.secrets["gcp_service_account"])
-            else:
-                creds_dict = dict(st.secrets)
-            
-            # Ubah dict ke format string JSON lalu load kembali sebagai stream dictionary yang valid
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(json.dumps(creds_dict)), SCOPE)
+        # Cek apakah berjalan di Streamlit Cloud (st.secrets)
+        if hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
+            # Konversi st.secrets ke dictionary murni Python
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
         else:
             # Jika berjalan di laptop lokal
             creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", SCOPE)
