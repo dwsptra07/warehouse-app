@@ -30,7 +30,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- KONEKSI GOOGLE SHEETS CLOUD (ANTI MALFORMED FRAMING) ---
+import json
+
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -39,16 +40,10 @@ SCOPES = [
 @st.cache_resource
 def init_connection():
     try:
-        if hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
-            creds_dict = dict(st.secrets["gcp_service_account"])
-            
-            # Membersihkan karakter escape \n pada private_key agar tidak error MalformedFraming
-            if "private_key" in creds_dict:
-                pk = creds_dict["private_key"]
-                pk = pk.replace("\\n", "\n")
-                creds_dict["private_key"] = pk
-                
-            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        if hasattr(st, "secrets") and "gcp_json" in st.secrets:
+            # Membaca seluruh string JSON mentah dari secrets
+            creds_info = json.loads(st.secrets["gcp_json"])
+            creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
         else:
             # Jika berjalan di laptop lokal
             creds = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
