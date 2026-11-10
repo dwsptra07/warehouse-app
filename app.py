@@ -30,8 +30,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-import json
-
+# --- KONEKSI GOOGLE SHEETS CLOUD (AMAN TOML SECRETS) ---
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
@@ -40,12 +39,12 @@ SCOPES = [
 @st.cache_resource
 def init_connection():
     try:
-        if hasattr(st, "secrets") and "gcp_json" in st.secrets:
-            # Membaca seluruh string JSON mentah dari secrets
-            creds_info = json.loads(st.secrets["gcp_json"])
-            creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+        if hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
+            # Membaca langsung sebagai dictionary dari format TOML Streamlit Cloud
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
         else:
-            # Jika berjalan di laptop lokal
+            # Jika berjalan di laptop lokal menggunakan file credentials.json
             creds = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
             
         client = gspread.authorize(creds)
@@ -270,7 +269,7 @@ else:
             else:
                 st.info("Belum ada misi aktif yang diberikan ke kru saat ini.")
 
-        # --- MENU 3B: MISI TUGAS SAYA (KRU) ---
+# --- MENU 3B: MISI TUGAS SAYA (KRU) ---
         elif menu == "🎯 Misi Tugas Saya":
             st.title(f"🎯 Papan Misi Tugas: {st.session_state.username}")
             st.markdown("*Berikut adalah daftar perintah atau tugas pengambilan part yang diberikan oleh Kapten untukmu.*")
