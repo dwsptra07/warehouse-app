@@ -1,4 +1,4 @@
-import streamlit as st
+        import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -36,26 +36,28 @@ SCOPE = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-import json
+import streamlit as st
+import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
 
-# --- KONEKSI GOOGLE SHEETS (CLOUD & LOKAL READY) ---
-SCOPE = [
-    "https://spreadsheets.google.com/feeds",
+# --- KONEKSI GOOGLE SHEETS CLOUD (VERSI TERBARU) ---
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
 @st.cache_resource
 def init_connection():
     try:
-        # Cek apakah berjalan di Streamlit Cloud (st.secrets)
+        # Cek apakah berjalan di Streamlit Cloud menggunakan st.secrets
         if hasattr(st, "secrets") and "gcp_service_account" in st.secrets:
-            # Konversi st.secrets ke dictionary murni Python
             creds_dict = dict(st.secrets["gcp_service_account"])
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
+            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
         else:
-            # Jika berjalan di laptop lokal
-            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", SCOPE)
-            
+            # Jika berjalan di laptop lokal menggunakan file credentials.json
+            creds = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
+
         client = gspread.authorize(creds)
         spreadsheet = client.open("Monitoring Serah Terima Part Service")
         sheet = spreadsheet.get_worksheet(0)
